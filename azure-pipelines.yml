@@ -1,5 +1,5 @@
 trigger:
-- main
+- 42413-staticfiles-nullrequestdelegate
 
 pool:
   vmImage: 'windows-latest'
