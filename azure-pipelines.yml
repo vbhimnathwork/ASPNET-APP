@@ -2,7 +2,7 @@ trigger:
 - 42413-staticfiles-nullrequestdelegate
 
 pool:
-  vmImage: 'windows-latest'
+  name: 'SHpool'
 
 variables:
   BuildConfiguration: 'Release'
