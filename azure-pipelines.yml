@@ -98,7 +98,7 @@ stages:
 
           - powershell: |
               $source = "C:\Temp\BlazingPizza\*"
-              $destination = "E:\webapps\Blazingpizza>"
+              $destination = "E:\webapps\Blazingpizza"
 
               Copy-Item `
                 -Path $source `
