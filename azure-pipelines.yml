@@ -97,6 +97,11 @@ stages:
               cleanDestinationFolder: true
 
           - powershell: |
+              Write-Host "Contents after extraction:"
+              Get-ChildItem "C:\Temp\BlazingPizza" -Recurse
+            displayName: "Verify Extracted Files"
+
+          - powershell: |
               $source = "C:\Temp\BlazingPizza\*"
               $destination = "E:\webapps\Blazingpizza"
 
