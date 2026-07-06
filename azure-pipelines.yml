@@ -2,7 +2,7 @@ trigger:
 - 42413-staticfiles-nullrequestdelegate
 
 pool:
-  name: 'MySelfHostedPool'
+  name: 'SHpool'
 
 variables:
   BuildConfiguration: 'Release'
