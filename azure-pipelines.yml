@@ -2,44 +2,112 @@ trigger:
 - 42413-staticfiles-nullrequestdelegate
 
 pool:
-  name: 'SHpool'
+  name: 'MySelfHostedPool'
 
 variables:
   BuildConfiguration: 'Release'
 
-steps:
+stages:
 
-- task: UseDotNet@2
-  displayName: 'Install .NET SDK'
-  inputs:
-    packageType: 'sdk'
-    version: '9.0.x'
+#==========================
+# BUILD STAGE
+#==========================
+- stage: Build
+  displayName: Build Application
 
-- task: DotNetCoreCLI@2
-  displayName: 'Restore'
-  inputs:
-    command: 'restore'
-    projects: 'src/Components/benchmarkapps/BlazingPizza.Server/BlazingPizza.Server.csproj'
-    arguments: >
-      /p:DefaultNetCoreTargetFramework=net9.0
+  jobs:
 
-- task: DotNetCoreCLI@2
-  displayName: 'Build'
-  inputs:
-    command: 'build'
-    projects: 'src/Components/benchmarkapps/BlazingPizza.Server/BlazingPizza.Server.csproj'
-    arguments: '--configuration $(BuildConfiguration)'
+  - job: BuildJob
 
-- task: DotNetCoreCLI@2
-  displayName: 'Publish'
-  inputs:
-    command: 'publish'
-    publishWebProjects: false
-    projects: 'src/Components/benchmarkapps/BlazingPizza.Server/BlazingPizza.Server.csproj'
-    arguments: '--configuration $(BuildConfiguration) --output $(Build.ArtifactStagingDirectory)'
+    steps:
 
-- task: PublishBuildArtifacts@1
-  displayName: 'Publish Artifact'
-  inputs:
-    PathtoPublish: '$(Build.ArtifactStagingDirectory)'
-    ArtifactName: 'drop'
+    - checkout: self
+
+    - task: UseDotNet@2
+      displayName: Install .NET SDK
+      inputs:
+        packageType: sdk
+        version: '9.0.x'
+
+    - task: DotNetCoreCLI@2
+      displayName: Restore
+      inputs:
+        command: restore
+        projects: 'src/Components/benchmarkapps/BlazingPizza.Server/BlazingPizza.Server.csproj'
+
+    - task: DotNetCoreCLI@2
+      displayName: Build
+      inputs:
+        command: build
+        projects: 'src/Components/benchmarkapps/BlazingPizza.Server/BlazingPizza.Server.csproj'
+        arguments: '--configuration $(BuildConfiguration)'
+
+    - task: DotNetCoreCLI@2
+      displayName: Publish
+      inputs:
+        command: publish
+        publishWebProjects: false
+        projects: 'src/Components/benchmarkapps/BlazingPizza.Server/BlazingPizza.Server.csproj'
+        arguments: '--configuration $(BuildConfiguration) --output $(Build.ArtifactStagingDirectory)'
+
+    - task: ArchiveFiles@2
+      displayName: Create ZIP
+      inputs:
+        rootFolderOrFile: '$(Build.ArtifactStagingDirectory)'
+        includeRootFolder: false
+        archiveType: zip
+        archiveFile: '$(Build.ArtifactStagingDirectory)\BlazingPizza.zip'
+        replaceExistingArchive: true
+
+    - publish: $(Build.ArtifactStagingDirectory)/BlazingPizza.zip
+      artifact: drop
+
+
+#==========================
+# DEPLOY STAGE
+#==========================
+
+- stage: Deploy
+  displayName: Deploy to IIS
+
+  dependsOn: Build
+
+  jobs:
+
+  - deployment: DeployToIIS
+
+    environment: DEV
+
+    strategy:
+
+      runOnce:
+
+        deploy:
+
+          steps:
+
+          - download: current
+            artifact: drop
+
+          - task: ExtractFiles@1
+            displayName: Extract ZIP
+            inputs:
+              archiveFilePatterns: '$(Pipeline.Workspace)\drop\BlazingPizza.zip'
+              destinationFolder: 'C:\Temp\BlazingPizza'
+              cleanDestinationFolder: true
+
+          - powershell: |
+              $source = "C:\Temp\BlazingPizza\*"
+              $destination = "E:\webapps\Blazingpizza>"
+
+              Copy-Item `
+                -Path $source `
+                -Destination $destination `
+                -Recurse `
+                -Force
+            displayName: Copy Files
+
+          - powershell: |
+              Import-Module WebAdministration
+              Restart-WebAppPool -Name "BlazingPizza"
+            displayName: Restart App Pool
