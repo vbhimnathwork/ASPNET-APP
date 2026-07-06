@@ -89,10 +89,15 @@ stages:
           - download: current
             artifact: drop
 
+          - powershell: |
+              Write-Host "Downloaded artifact:"
+              Get-ChildItem "$(Pipeline.Workspace)\drop" -Recurse
+            displayName: "Verify Downloaded Artifact"
+
           - task: ExtractFiles@1
             displayName: Extract ZIP
             inputs:
-              archiveFilePatterns: '$(Pipeline.Workspace)\drop\BlazingPizza.zip'
+              archiveFilePatterns: '$(Pipeline.Workspace)\drop\BlazingPizza.Server.zip'
               destinationFolder: 'C:\Temp\BlazingPizza'
               cleanDestinationFolder: true
 
