@@ -97,6 +97,7 @@ stages:
   - job: Validation
     displayName: 'Manual Validation Approval'
     dependsOn: BuildAndPush
+    pool: server
     timeoutInMinutes: 1440 # 24-hour timeout limit before automatically rejecting
     steps:
     - task: ManualValidation@0
