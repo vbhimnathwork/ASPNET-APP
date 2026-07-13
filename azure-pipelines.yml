@@ -1,11 +1,14 @@
 trigger:
-- none
+- deploy
 
 pool:
   name: 'SHpool'
 
 variables:
   BuildConfiguration: 'Release'
+  dockerserviceconnection: 'dockersvcconnection'
+  repository: 'vivekns1/blazingpizza'
+  imageVersion: '$(Build.SourceVersion)'
 
 stages:
 
@@ -59,65 +62,48 @@ stages:
     #     archiveFile: '$(Build.ArtifactStagingDirectory)\BlazingPizza.zip'
     #     replaceExistingArchive: true
 
-    - publish: $(Build.ArtifactStagingDirectory)/BlazingPizza.Server.zip
-      artifact: drop
+    # - publish: $(Build.ArtifactStagingDirectory)/BlazingPizza.Server.zip
+    #   artifact: drop
 
 
 #==========================
 # DEPLOY STAGE
 #==========================
 
-- stage: Deploy
-  displayName: Deploy to IIS
 
-  dependsOn: Build
-
+- stage: Createimage
+  dependsOn: 'Build'
   jobs:
+  - job: BuildAndPush
+    steps:
+    - task: Docker@2
+      displayName: 'Build and Push to Docker Hub'
+      inputs:
+        containerRegistry: '$(dockerserviceconnection)'
+        repository: '$(repository)'
+        command: 'buildAndPush'
+        Dockerfile: '**/Dockerfile'
+        tags: |
+          $(imageVersion)
 
-  - deployment: DeployToIIS
+#List target image details in Pipeline logs
+    - script: |
+        echo "Verifying image tags for: $(repository)"
+        echo "Looking for tag: $(imageVersion)"
+        echo "--------------------------------"
+        curl -s "https://docker.com" | grep -o '"name": *"[^"]*"' | sed 's/"name": *//' | tr -d '"'
+      # Fetches the recent tags from DockerHUB API
 
-    environment: DEV
-
-    strategy:
-
-      runOnce:
-
-        deploy:
-
-          steps:
-
-          - download: current
-            artifact: drop
-
-          - powershell: |
-              Write-Host "Downloaded artifact:"
-              Get-ChildItem "$(Pipeline.Workspace)\drop" -Recurse
-            displayName: "Verify Downloaded Artifact"
-
-          - task: ExtractFiles@1
-            displayName: Extract ZIP
-            inputs:
-              archiveFilePatterns: '$(Pipeline.Workspace)\drop\BlazingPizza.Server.zip'
-              destinationFolder: 'C:\Temp\BlazingPizza'
-              cleanDestinationFolder: true
-
-          - powershell: |
-              Write-Host "Contents after extraction:"
-              Get-ChildItem "C:\Temp\BlazingPizza" -Recurse
-            displayName: "Verify Extracted Files"
-
-          - powershell: |
-              $source = "C:\Temp\BlazingPizza\*"
-              $destination = "E:\webapps\Blazingpizza"
-
-              Copy-Item `
-                -Path $source `
-                -Destination $destination `
-                -Recurse `
-                -Force
-            displayName: Copy Files
-
-          - powershell: |
-              Import-Module WebAdministration
-              Restart-WebAppPool -Name "BlazingPizza"
-            displayName: Restart App Pool
+  - job: Validation
+    displayName: 'Manual Validation Approval'
+    dependsOn: BuildAndPush
+    timeoutInMinutes: 1440 # 24-hour timeout limit before automatically rejecting
+    steps:
+    - task: ManualValidation@1
+      inputs:
+        notifyUsers: |
+          vivekbhimnath@gmail.com
+        instructions: |
+          Please review the build logs for job 'BuildAndPush'. 
+          Verify that image '$(repository):$(imageVersion)' has been pushed successfully.
+        onTimeout: 'reject'
