@@ -1,5 +1,5 @@
 trigger:
-- 42413-staticfiles-nullrequestdelegate
+- none
 
 pool:
   name: 'SHpool'
