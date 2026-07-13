@@ -99,7 +99,7 @@ stages:
     dependsOn: BuildAndPush
     timeoutInMinutes: 1440 # 24-hour timeout limit before automatically rejecting
     steps:
-    - task: ManualValidation@1
+    - task: ManualValidation@0
       inputs:
         notifyUsers: |
           vivekbhimnath@gmail.com
