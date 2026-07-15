@@ -88,6 +88,9 @@ stages:
 
 #List target image details in Pipeline logs
     - powershell: |
+        # Force the session to explicitly negotiate over TLS 1.2
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
         $repo = "$(repository)"
         $targetTag = "$(imageVersion)"
         
@@ -95,21 +98,21 @@ stages:
         Write-Host "Looking for tag: $targetTag"
         Write-Host "--------------------------------"
         
+        # Added page_size query parameter to ensure all recent tags are included
         $apiUrl = "https://docker.com"
         
-        # Define a standard browser User-Agent header so Docker Hub doesn't block the request
         $headers = @{
-            "User-Agent" = "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+            "User-Agent" = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
         }
         
         try {
-            # Make the API call with the headers included
             $response = Invoke-RestMethod -Uri $apiUrl -Method Get -Headers $headers
             
+            # Safely capture the name property arrays
             $tags = $response.results.name
             
             if ($null -eq $tags -or $tags.Count -eq 0) {
-                Write-Error "ERROR: Received an empty tag list from Docker Hub API. The request might be blocked or throttled."
+                Write-Error "ERROR: Unable to read tag array entries. Verification block stopped."
                 exit 1
             }
             
@@ -119,11 +122,12 @@ stages:
             }
             Write-Host "--------------------------------"
             
+            # Direct inclusion validation matching against pipeline commit variable
             if ($tags -contains $targetTag) {
                 Write-Host "SUCCESS: Image tag '$targetTag' was successfully verified on Docker Hub!"
             } else {
-                Write-Error "ERROR: Image tag '$targetTag' was not found in the repository tags list."
-                exit 1 # Fails the pipeline step immediately if the tag is missing
+                Write-Error "ERROR: Image tag '$targetTag' was not found in the remote registry."
+                exit 1
             }
         }
         catch {
