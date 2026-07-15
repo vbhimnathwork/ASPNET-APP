@@ -88,53 +88,38 @@ stages:
 
 #List target image details in Pipeline logs
     - powershell: |
-        # Force the session to explicitly negotiate over TLS 1.2
-        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-
         $repo = "$(repository)"
         $targetTag = "$(imageVersion)"
+        $fullImageUri = "${repo}:${targetTag}"
         
-        Write-Host "Querying Docker Hub API for: $repo"
-        Write-Host "Looking for tag: $targetTag"
-        Write-Host "--------------------------------"
+        Write-Host "Verifying Image via native Docker client on Windows Host Machine"
+        Write-Host "Target Image to check: $fullImageUri"
+        Write-Host "---------------------------------------------------------"
         
-        # Added page_size query parameter to ensure all recent tags are included
-        $apiUrl = "https://docker.com"
-        
-        $headers = @{
-            "User-Agent" = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-        }
-        
+        # 1. Clear any local cache of this image tag if it exists 
+        # This forces the agent to try and check the real upstream Docker Hub registry
         try {
-            $response = Invoke-RestMethod -Uri $apiUrl -Method Get -Headers $headers
-            
-            # Safely capture the name property arrays
-            $tags = $response.results.name
-            
-            if ($null -eq $tags -or $tags.Count -eq 0) {
-                Write-Error "ERROR: Unable to read tag array entries. Verification block stopped."
-                exit 1
-            }
-            
-            Write-Host "Available Tags Found on Docker Hub:"
-            foreach ($tag in $tags) {
-                Write-Host " - $tag"
-            }
-            Write-Host "--------------------------------"
-            
-            # Direct inclusion validation matching against pipeline commit variable
-            if ($tags -contains $targetTag) {
-                Write-Host "SUCCESS: Image tag '$targetTag' was successfully verified on Docker Hub!"
-            } else {
-                Write-Error "ERROR: Image tag '$targetTag' was not found in the remote registry."
-                exit 1
-            }
+            Write-Host "Clearing local cache to ensure a fresh remote verification..."
+            docker rmi -f $fullImageUri 2>$null
+        } catch {
+            # Safely ignore if image didn't exist locally yet
         }
-        catch {
-            Write-Error "Failed to connect or query Docker Hub API: $_"
+
+        # 2. Use docker manifest inspect to verify the image exists on Docker Hub remotely
+        # without needing to download the entire large image payload layers.
+        Write-Host "Querying Docker Hub Registry for manifest..."
+        docker manifest inspect $fullImageUri > $null 2>&1
+        
+        # Capture the exit code of the native docker command execution loop
+        if ($LastExitCode -eq 0) {
+            Write-Host "---------------------------------------------------------"
+            Write-Host "SUCCESS: Remote Image tag '$targetTag' was successfully verified on Docker Hub!"
+            Write-Host "The image manifest is active, valid, and pullable."
+        } else {
+            Write-Error "ERROR: Image validation failed. The tag '$targetTag' could not be found or verified on Docker Hub."
             exit 1
         }
-      displayName: 'Verify Pushed Repository Tags (Windows)'
+      displayName: 'Verify Pushed Repository Tags (Windows CLI)'
 
   - job: Validation
     displayName: 'Manual Validation Approval'
