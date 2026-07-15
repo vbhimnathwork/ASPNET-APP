@@ -97,12 +97,21 @@ stages:
         
         $apiUrl = "https://docker.com"
         
+        # Define a standard browser User-Agent header so Docker Hub doesn't block the request
+        $headers = @{
+            "User-Agent" = "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+        }
+        
         try {
-            # Make the API call and automatically parse the JSON response
-            $response = Invoke-RestMethod -Uri $apiUrl -Method Get
+            # Make the API call with the headers included
+            $response = Invoke-RestMethod -Uri $apiUrl -Method Get -Headers $headers
             
-            # Extract only the 'name' property from the results list (which matches your tags)
             $tags = $response.results.name
+            
+            if ($null -eq $tags -or $tags.Count -eq 0) {
+                Write-Error "ERROR: Received an empty tag list from Docker Hub API. The request might be blocked or throttled."
+                exit 1
+            }
             
             Write-Host "Available Tags Found on Docker Hub:"
             foreach ($tag in $tags) {
@@ -110,16 +119,16 @@ stages:
             }
             Write-Host "--------------------------------"
             
-            # Verify if the specific version we pushed is visible in the list
             if ($tags -contains $targetTag) {
                 Write-Host "SUCCESS: Image tag '$targetTag' was successfully verified on Docker Hub!"
             } else {
-                Write-Warning "WARNING: Image tag '$targetTag' was not found in the immediate results list."
-                Write-Warning "Please manually double check Docker Hub before proceeding."
+                Write-Error "ERROR: Image tag '$targetTag' was not found in the repository tags list."
+                exit 1 # Fails the pipeline step immediately if the tag is missing
             }
         }
         catch {
             Write-Error "Failed to connect or query Docker Hub API: $_"
+            exit 1
         }
       displayName: 'Verify Pushed Repository Tags (Windows)'
 
