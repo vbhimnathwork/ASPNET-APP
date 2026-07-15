@@ -87,12 +87,41 @@ stages:
           $(imageVersion)
 
 #List target image details in Pipeline logs
-    - script: |
-        echo "Verifying image tags for: $(repository)"
-        echo "Looking for tag: $(imageVersion)"
-        echo "--------------------------------"
-        curl -s "https://docker.com" | grep -o '"name": *"[^"]*"' | sed 's/"name": *//' | tr -d '"'
-      # Fetches the recent tags from DockerHUB API
+    - powershell: |
+        $repo = "$(repository)"
+        $targetTag = "$(imageVersion)"
+        
+        Write-Host "Querying Docker Hub API for: $repo"
+        Write-Host "Looking for tag: $targetTag"
+        Write-Host "--------------------------------"
+        
+        $apiUrl = "https://docker.com"
+        
+        try {
+            # Make the API call and automatically parse the JSON response
+            $response = Invoke-RestMethod -Uri $apiUrl -Method Get
+            
+            # Extract only the 'name' property from the results list (which matches your tags)
+            $tags = $response.results.name
+            
+            Write-Host "Available Tags Found on Docker Hub:"
+            foreach ($tag in $tags) {
+                Write-Host " - $tag"
+            }
+            Write-Host "--------------------------------"
+            
+            # Verify if the specific version we pushed is visible in the list
+            if ($tags -contains $targetTag) {
+                Write-Host "SUCCESS: Image tag '$targetTag' was successfully verified on Docker Hub!"
+            } else {
+                Write-Warning "WARNING: Image tag '$targetTag' was not found in the immediate results list."
+                Write-Warning "Please manually double check Docker Hub before proceeding."
+            }
+        }
+        catch {
+            Write-Error "Failed to connect or query Docker Hub API: $_"
+        }
+      displayName: 'Verify Pushed Repository Tags (Windows)'
 
   - job: Validation
     displayName: 'Manual Validation Approval'
