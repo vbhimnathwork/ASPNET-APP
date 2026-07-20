@@ -161,3 +161,47 @@ stages:
           Please review the build logs for job 'BuildAndPush'. 
           Verify that image '$(repository):$(imageVersion)' has been pushed successfully.
         onTimeout: 'reject'
+
+#==========================
+# DEPLOY CONTAINER
+#==========================
+
+- stage: DeployContainer
+  displayName: 'Deploy Docker Container'
+  dependsOn: Createimage
+  condition: succeeded()
+
+  jobs:
+
+  - job: Deploy
+
+    steps:
+
+    - powershell: |
+
+        $image = "$(repository):$(imageVersion)"
+        $container = "blazingpizza"
+
+        Write-Host "Deploying Image: $image"
+
+        # Stop existing container (ignore errors)
+        docker stop $container 2>$null
+
+        # Remove existing container
+        docker rm $container 2>$null
+
+        # Pull latest image
+        docker pull $image
+
+        # Run container
+        docker run -d `
+          --name $container `
+          -p 4000:8080 `
+          --restart unless-stopped `
+          $image
+
+        Write-Host ""
+        Write-Host "Running Containers"
+        docker ps
+
+      displayName: 'Pull Image and Run Container'
