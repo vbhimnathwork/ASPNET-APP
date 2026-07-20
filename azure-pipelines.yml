@@ -86,6 +86,32 @@ stages:
         tags: |
           $(imageVersion)
 
+    - powershell: |
+        $image = "$(repository):$(imageVersion)"
+
+        Write-Host "=========================="
+        Write-Host "Local Images"
+        Write-Host "=========================="
+
+        docker images
+
+        Write-Host ""
+
+        Write-Host "=========================="
+        Write-Host "Image Size"
+        Write-Host "=========================="
+
+        docker image inspect $image --format "{{.Size}} bytes"
+
+        Write-Host ""
+
+        Write-Host "=========================="
+        Write-Host "Layer History"
+        Write-Host "=========================="
+
+    docker history $image
+  displayName: "Analyze Image"
+
 #List target image details in Pipeline logs
     - powershell: |
         $repo = "$(repository)"
