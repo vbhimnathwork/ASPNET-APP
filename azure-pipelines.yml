@@ -184,24 +184,41 @@ stages:
 
         Write-Host "Deploying Image: $image"
 
-        # Stop existing container (ignore errors)
-        docker stop $container 2>$null
-
-        # Remove existing container
-        docker rm $container 2>$null
-
-        # Pull latest image
+         # Pull latest image
         docker pull $image
 
-        # Run container
-        docker run -d `
-          --name $container `
-          -p 4000:8080 `
-          --restart unless-stopped `
-          $image
+        # Check if container exists
+        $exists = docker ps -a --filter "name=^$container$" --format "{{.Names}}"
 
-        Write-Host ""
-        Write-Host "Running Containers"
-        docker ps
+        if ($exists) {
+            Write-Host "Stopping existing container..."
+            docker stop $container
+
+            Write-Host "Removing existing container..."
+            docker rm $container
+        }
+        else {
+            Write-Host "Container does not exist. Fresh deployment."
+        }
+
+        # Run new container
+        docker run -d `
+            --name $container `
+            -p 8080:8080 `
+            --restart unless-stopped `
+            $image
+
+          docker ps
+
+        # # Run container
+        # docker run -d `
+        #   --name $container `
+        #   -p 4000:8080 `
+        #   --restart unless-stopped `
+        #   $image
+
+        # Write-Host ""
+        # Write-Host "Running Containers"
+        # docker ps
 
       displayName: 'Pull Image and Run Container'
