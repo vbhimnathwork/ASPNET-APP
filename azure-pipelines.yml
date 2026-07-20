@@ -109,8 +109,8 @@ stages:
         Write-Host "Layer History"
         Write-Host "=========================="
 
-    docker history $image
-  displayName: "Analyze Image"
+        docker history $image
+      displayName: "Analyze Image"
 
 #List target image details in Pipeline logs
     - powershell: |
