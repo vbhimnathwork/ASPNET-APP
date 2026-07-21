@@ -166,14 +166,14 @@ stages:
 # DEPLOY CONTAINER
 #==========================
 
-- stage: DeployContainer
-  displayName: 'Deploy Docker Container'
+- stage: ListImagesAndTag
+  displayName: 'List Images and Re-Tag Images'
   dependsOn: Createimage
   condition: succeeded()
 
   jobs:
 
-  - job: Deploy
+  - job: ImageVerification
 
     steps:
 
@@ -206,7 +206,7 @@ stages:
 
 
 
-      displayName: 'Pull Image and Run Container'
+      displayName: 'Pull Image and List Images'
 
     - powershell: |
         
@@ -218,7 +218,42 @@ stages:
         Get-Content manifests/deployments/deploy.yaml
 
         docker images
-      displayName: Replace Image Tag
+      displayName: Replace Image Tag and List
+
+- stage: DeploytoKube
+  displayName: Deploy manifest files to Kubernetes
+  dependsOn:  ListImagesAndTag
+  condition: succeeded()
+    jobs:
+    - deployment: deploy
+      displayName: Deploy app pods
+      environment: Dev
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+            - task: PowerShell@2
+              displayName: Kube pods depl
+              inputs:
+                targetType: inline
+                script: |
+                  kubectl apply -f manifests/deployments/deploy.yaml
+                  kubectl apply -f manifests/services/service.yaml
+                  kubectl rollout status deployment/aspnet-deploy
+
+                  kubectl get deployment
+                  kubectl get pods
+                  kubectl get svc
+                  
+
+
+                  
+            
+
+
+
+
+
         
 
     
