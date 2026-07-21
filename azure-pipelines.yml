@@ -1,5 +1,5 @@
 trigger:
-- deploy
+- k8s-deploy
 
 pool:
   name: 'SHpool'
