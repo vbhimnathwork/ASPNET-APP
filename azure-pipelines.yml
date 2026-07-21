@@ -224,36 +224,23 @@ stages:
   displayName: Deploy manifest files to Kubernetes
   dependsOn:  ListImagesAndTag
   condition: succeeded()
-    jobs:
-    - deployment: deploy
-      displayName: Deploy app pods
-      environment: Dev
-      strategy:
-        runOnce:
-          deploy:
-            steps:
-            - task: PowerShell@2
-              displayName: Kube pods depl
-              inputs:
-                targetType: inline
-                script: |
-                  kubectl apply -f manifests/deployments/deploy.yaml
-                  kubectl apply -f manifests/services/service.yaml
-                  kubectl rollout status deployment/aspnet-deploy
+  jobs:
+  - deployment: deploy
+    displayName: Deploy app pods
+    environment: Dev
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: PowerShell@2
+            displayName: Kube pods depl
+            inputs:
+              targetType: inline
+              script: |
+                kubectl apply -f manifests/deployments/deploy.yaml
+                kubectl apply -f manifests/services/service.yaml
+                kubectl rollout status deployment/aspnet-deploy
 
-                  kubectl get deployment
-                  kubectl get pods
-                  kubectl get svc
-                  
-
-
-                  
-            
-
-
-
-
-
-        
-
-    
+                kubectl get deployment
+                kubectl get pods
+                kubectl get svc
