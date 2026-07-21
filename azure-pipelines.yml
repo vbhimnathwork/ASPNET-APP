@@ -201,24 +201,22 @@ stages:
             Write-Host "Container does not exist. Fresh deployment."
         }
 
-        # Run new container
-        docker run -d `
-            --name $container `
-            -p 8080:8080 `
-            --restart unless-stopped `
-            $image
+        # List images
+        docker images
 
-          docker ps
 
-        # # Run container
-        # docker run -d `
-        #   --name $container `
-        #   -p 4000:8080 `
-        #   --restart unless-stopped `
-        #   $image
-
-        # Write-Host ""
-        # Write-Host "Running Containers"
-        # docker ps
 
       displayName: 'Pull Image and Run Container'
+
+    - powershell: |
+        
+
+        (Get-Content manifests/deployments/deploy.yaml) `
+         -replace 'IMAGE_TAG','$(imageVersion)' |
+         Set-Content manifests/deployments/deploy.yaml
+
+        Get-Content manifests/deployment.yaml
+        displayName: Replace Image Tag
+        
+
+    
