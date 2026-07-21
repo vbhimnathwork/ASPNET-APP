@@ -215,7 +215,9 @@ stages:
          -replace 'IMAGE_TAG','$(imageVersion)' |
          Set-Content manifests/deployments/deploy.yaml
 
-        Get-Content manifests/deployment.yaml
+        Get-Content manifests/deployments/deploy.yaml
+
+        docker images
         displayName: Replace Image Tag
         
 
