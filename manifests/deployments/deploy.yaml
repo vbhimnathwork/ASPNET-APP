@@ -1,0 +1,33 @@
+#deploy.yaml
+#This is a basic k8s deployment file to deploy aspnet application wherein image is stored in dockerhub
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aspnet-deploy
+  labels: 
+    app: aspnet-app
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: aspnet-app
+  template:
+    metadata:
+      labels:
+        app: aspnet-app
+    spec:
+      containers:
+      -  name: blazingpizza-ctr
+         image: vivekns1/blazingpizza:IMAGE_TAG
+         ports:
+         -  containerPort: 8080
+         env:
+         -  name: ASPNETCORE_ENV
+            value: "Production"
+         resources:
+            limits:
+              cpu: "200" #200
+              memory: "100Mi" #100
+            requests:
+              cpu: "100m" #100
+              memory: "50Mi" #50
