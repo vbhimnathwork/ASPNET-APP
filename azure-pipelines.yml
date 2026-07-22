@@ -72,7 +72,7 @@ stages:
 
 
 - stage: Createimage
-  dependsOn: 'Build'
+  # dependsOn: 'Build'
   jobs:
   - job: BuildAndPush
     steps:
