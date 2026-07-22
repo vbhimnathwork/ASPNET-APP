@@ -237,6 +237,8 @@ stages:
             inputs:
               targetType: inline
               script: |
+                $env:KUBECONFIG="C:\Users\Vivek\.kube\config"
+                kubectl config current-context
                 kubectl apply -f manifests/deployments/deploy.yaml
                 kubectl apply -f manifests/services/service.yaml
                 kubectl rollout status deployment/aspnet-deploy
